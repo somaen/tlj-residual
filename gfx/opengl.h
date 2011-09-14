@@ -59,9 +59,16 @@ public:
 	void translateViewpointStart(Graphics::Vector3d pos, float pitch, float yaw, float roll);
 	void translateViewpointFinish();
 */
+	virtual void prepareMovieFrame(int width, int height, byte *bitmap);
+	virtual void drawMovieFrame(int offsetX, int offsetY);
+	virtual void releaseMovieFrame();
 private:
 	void start2DMode();
 	void end2DMode();
+	int _movieNumTex;
+	uint *_movieTexIds;
+	int _movieWidth;
+	int _movieHeight;
 };
 
 } // End of namespace Stark

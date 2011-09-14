@@ -101,17 +101,17 @@ public:
 	void drawLine(PrimitiveObject *primitive);
 	void drawPolygon(PrimitiveObject *primitive);
 
-	void prepareSmushFrame(int width, int height, byte *bitmap);
-	void drawSmushFrame(int offsetX, int offsetY);
-	void releaseSmushFrame();
 	*/
-
+	// TODO: Fix these
+	virtual void prepareMovieFrame(int width, int height, byte *bitmap) {};
+	virtual void drawMovieFrame(int offsetX, int offsetY) {};
+	virtual void releaseMovieFrame() {};
 private:
 	TinyGL::ZBuffer *_zb;
 	byte *_screen;
-	byte *_smushBitmap;
-	int _smushWidth;
-	int _smushHeight;
+	byte *_movieBitmap;
+	int _movieWidth;
+	int _movieHeight;
 	byte *_storedDisplay;
 };
 

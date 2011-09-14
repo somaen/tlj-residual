@@ -32,6 +32,8 @@
 #include "audio/mixer.h"
 
 namespace Stark {
+	
+StarkEngine *g_stark = NULL;
 
 StarkEngine::StarkEngine(OSystem *syst, const ADGameDescription *gameDesc) : Engine(syst), _gameDescription(gameDesc), _gfx(NULL), _scene(NULL) {
 	_mixer->setVolumeForSoundType(Audio::Mixer::kPlainSoundType, 127);
@@ -39,6 +41,10 @@ StarkEngine::StarkEngine(OSystem *syst, const ADGameDescription *gameDesc) : Eng
 	_mixer->setVolumeForSoundType(Audio::Mixer::kSpeechSoundType, ConfMan.getInt("speech_volume"));
 	_mixer->setVolumeForSoundType(Audio::Mixer::kMusicSoundType, ConfMan.getInt("music_volume"));
 
+	g_stark = this;
+	_isPlayingFMV = false;
+	_binkPlayer = CreateBinkPlayer();
+	
 	// Add the available debug channels
 	DebugMan.addDebugChannel(kDebugArchive, "Archive", "Debug the archive loading");
 	DebugMan.addDebugChannel(kDebugXMG, "XMG", "Debug the loading of XMG images");
@@ -56,6 +62,10 @@ Common::Error StarkEngine::run() {
 	// Get the screen prepared
 	_gfx->setupScreen(640, 480, ConfMan.getBool("fullscreen"));
 
+	// FIXME: This is just here to strap up the Prologue-video for now
+	//_binkPlayer->play("global/0602.bbb", false, 0, 0);
+	//_isPlayingFMV = true;
+	
 	// Start running
 	mainLoop();
 
@@ -103,8 +113,14 @@ void StarkEngine::updateDisplayScene() {
 	// Clear the screen
 	_gfx->clearScreen();
 
-	// Render the current scene
-	_scene->render(delta);
+	if (_isPlayingFMV) {
+		if (_binkPlayer->isUpdateNeeded()) {
+			
+		}
+	} else {
+		// Render the current scene
+		_scene->render(delta);
+	}
 
 	// Swap buffers
 	_gfx->flipBuffer();

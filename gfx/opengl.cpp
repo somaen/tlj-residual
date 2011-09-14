@@ -23,11 +23,20 @@
  *
  */
 
+#define FORBIDDEN_SYMBOL_EXCEPTION_printf
+#define FORBIDDEN_SYMBOL_EXCEPTION_chdir
+#define FORBIDDEN_SYMBOL_EXCEPTION_getcwd
+#define FORBIDDEN_SYMBOL_EXCEPTION_getwd
+#define FORBIDDEN_SYMBOL_EXCEPTION_mkdir
+#define FORBIDDEN_SYMBOL_EXCEPTION_unlink
+
 #include "engines/stark/gfx/opengl.h"
 
 #include "common/system.h"
 
 #ifdef USE_OPENGL
+
+#define BITMAP_TEXTURE_SIZE 256
 
 #ifdef SDL_BACKEND
 #include <SDL_opengl.h>
@@ -227,6 +236,101 @@ void OpenGLGfxDriver::translateViewpointFinish() {
 }
 */
 
+void OpenGLGfxDriver::prepareMovieFrame(int width, int height, byte *bitmap) {
+	// remove if already exist
+	if (_movieNumTex > 0) {
+		glDeleteTextures(_movieNumTex, _movieTexIds);
+		delete[] _movieTexIds;
+		_movieNumTex = 0;
+	}
+	
+	// create texture
+	_movieNumTex = ((width + (BITMAP_TEXTURE_SIZE - 1)) / BITMAP_TEXTURE_SIZE) *
+	((height + (BITMAP_TEXTURE_SIZE - 1)) / BITMAP_TEXTURE_SIZE);
+	_movieTexIds = new GLuint[_movieNumTex];
+	glGenTextures(_movieNumTex, _movieTexIds);
+	for (int i = 0; i < _movieNumTex; i++) {
+		glBindTexture(GL_TEXTURE_2D, _movieTexIds[i]);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, BITMAP_TEXTURE_SIZE, BITMAP_TEXTURE_SIZE, 0, GL_RGB, GL_UNSIGNED_SHORT_5_6_5, NULL);
+	}
+	
+	glPixelStorei(GL_UNPACK_ALIGNMENT, 2);
+	glPixelStorei(GL_UNPACK_ROW_LENGTH, width);
+	
+	int curTexIdx = 0;
+	for (int y = 0; y < height; y += BITMAP_TEXTURE_SIZE) {
+		for (int x = 0; x < width; x += BITMAP_TEXTURE_SIZE) {
+			int t_width = (x + BITMAP_TEXTURE_SIZE >= width) ? (width - x) : BITMAP_TEXTURE_SIZE;
+			int t_height = (y + BITMAP_TEXTURE_SIZE >= height) ? (height - y) : BITMAP_TEXTURE_SIZE;
+			glBindTexture(GL_TEXTURE_2D, _movieTexIds[curTexIdx]);
+			glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, t_width, t_height, GL_RGB, GL_UNSIGNED_SHORT_5_6_5, bitmap + (y * 2 * width) + (2 * x));
+			curTexIdx++;
+		}
+	}
+	glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
+	glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
+	_movieWidth = width;
+	_movieHeight = height;
+}
+
+void OpenGLGfxDriver::drawMovieFrame(int offsetX, int offsetY) {
+	// prepare view
+	glMatrixMode(GL_PROJECTION);
+	glLoadIdentity();
+	glOrtho(0, _screenWidth, _screenHeight, 0, 0, 1);
+	glMatrixMode(GL_MODELVIEW);
+	glLoadIdentity();
+	glMatrixMode(GL_TEXTURE);
+	glLoadIdentity();
+	// A lot more may need to be put there : disabling Alpha test, blending, ...
+	// For now, just keep this here :-)
+	
+	glDisable(GL_LIGHTING);
+	glEnable(GL_TEXTURE_2D);
+	// draw
+	glDisable(GL_DEPTH_TEST);
+	glDepthMask(GL_FALSE);
+	glEnable(GL_SCISSOR_TEST);
+	
+	glScissor(offsetX, _screenHeight - (offsetY + _movieHeight), _movieWidth, _movieHeight);
+	
+	int curTexIdx = 0;
+	for (int y = 0; y < _movieHeight; y += BITMAP_TEXTURE_SIZE) {
+		for (int x = 0; x < _movieWidth; x += BITMAP_TEXTURE_SIZE) {
+			glBindTexture(GL_TEXTURE_2D, _movieTexIds[curTexIdx]);
+			glBegin(GL_QUADS);
+			glTexCoord2f(0, 0);
+			glVertex2i(x + offsetX, y + offsetY);
+			glTexCoord2f(1.0f, 0.0f);
+			glVertex2i(x + offsetX + BITMAP_TEXTURE_SIZE, y + offsetY);
+			glTexCoord2f(1.0f, 1.0f);
+			glVertex2i(x + offsetX + BITMAP_TEXTURE_SIZE, y + offsetY + BITMAP_TEXTURE_SIZE);
+			glTexCoord2f(0.0f, 1.0f);
+			glVertex2i(x + offsetX, y + offsetY + BITMAP_TEXTURE_SIZE);
+			glEnd();
+			curTexIdx++;
+		}
+	}
+	
+	glDisable(GL_SCISSOR_TEST);
+	glDisable(GL_TEXTURE_2D);
+	glDepthMask(GL_TRUE);
+	glEnable(GL_DEPTH_TEST);
+	glEnable(GL_LIGHTING);
+}
+
+void OpenGLGfxDriver::releaseMovieFrame() {
+	if (_movieNumTex > 0) {
+		glDeleteTextures(_movieNumTex, _movieTexIds);
+		delete[] _movieTexIds;
+		_movieNumTex = 0;
+	}
+}
+	
 } // End of namespace Stark
 
 #endif // USE_OPENGL

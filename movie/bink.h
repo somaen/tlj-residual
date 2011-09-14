@@ -1,7 +1,7 @@
 /* Residual - A 3D game interpreter
  *
  * Residual is the legal property of its developers, whose names
- * are too numerous to list here. Please refer to the AUTHORS
+ * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
  * This library is free software; you can redistribute it and/or
@@ -18,60 +18,55 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
  *
- * $URL$
- * $Id$
- *
  */
 
-#ifndef STARK_H
-#define STARK_H
+#ifndef GRIM_BINK_PLAYER_H
+#define GRIM_BINK_PLAYER_H
 
-#include "engines/advancedDetector.h"
-#include "engines/engine.h"
+#include "common/scummsys.h"
+#include "common/file.h"
 
-#include "engines/stark/scene.h"
-// This should probably be changed later
+#include "graphics/pixelformat.h"
+
+#include "audio/mixer.h"
+#include "audio/audiostream.h"
+
 #include "engines/stark/movie/movie.h"
+
+#ifdef USE_BINK
+
+namespace Video{
+	class BinkDecoder;
+}
+
+namespace Graphics{
+	struct Surface;
+}
 
 namespace Stark {
 
-/*
-enum StarkGameID {
-	GID_TLJ = 0,
-	GID_DREAM
-};
-*/
-
-enum StarkGameFeatures {
-	GF_DVD =  (1 << 31)
-};
-
-class StarkEngine : public Engine {
-public:
-	StarkEngine(OSystem *syst, const ADGameDescription *gameDesc);
-	virtual ~StarkEngine();
-	void setIsPlayingFMV(bool value) {
-		_isPlayingFMV = value;
-	}
-
-protected:
-	// Engine APIs
-	virtual Common::Error run();
-
+class BinkPlayer : public MoviePlayer {
 private:
-	void mainLoop();
-	void updateDisplayScene();
+	Video::BinkDecoder *_binkDecoder;
+	Graphics::Surface *_surface, *_externalSurface;
+public:
+	BinkPlayer();
+	~BinkPlayer();
 
-	GfxDriver *_gfx;
-	MoviePlayer *_binkPlayer;
-	bool _isPlayingFMV;
-	const ADGameDescription *_gameDescription;
-
-	Scene *_scene;
+	bool play(const char *filename, bool looping, int x, int y);
+	void stop();
+	void saveState(SaveGame *state);
+	void restoreState(SaveGame *state);
+	void deliverFrameFromDecode(int width, int height, uint16 *dat);
+private:
+	static void timerCallback(void *ptr);
+	virtual void handleFrame();
+	void init();
+	void deinit();
 };
 
-extern StarkEngine *g_stark;
-	
-} // End of namespace Stark
+} // end of namespace Grim
 
-#endif // STARK_H
+#endif // USE_BINK
+
+#endif

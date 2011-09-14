@@ -9,6 +9,10 @@ MODULE_OBJS := \
 	gfx/driver.o \
 	gfx/opengl.o \
 	gfx/tinygl.o \
+	movie/bink.o \
+	movie/movie.o \
+	movie/smacker.o \
+	movie/codecs/smk_decoder.cpp \
 	scene.o \
 	skeleton.o \
 	skeleton_anim.o \
